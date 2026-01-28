@@ -1,42 +1,87 @@
+# =========================
+# GET – Buscar usuário
+# =========================
+
 Dado('que o usuario deseja buscar um usuario especifico') do
-  @get_url = 'URL_DE_BUSCA_AQUI'
+  @get_url = Employee_Requests.new
 end
 
 Quando('ele faz uma busca do nome') do
-  @response = HTTParty.get(@get_url)
+  @list_employee = @getlist.find_employee
 end
 
 Entao('abre o cadastro do usuario buscado') do
-  # usa a variável @response que foi preenchida no step anterior
-  expect(@response.code).to eq 404
+  expect(@response.code).to eq 200
 
   body = @response.parsed_response
-  # validar se o JSON tem a chave 'status' e se é 'success'
-  expect(body).to have_key('status')
-  expect(body['status']).to eq 'success'
+  expect(body).to have_key('data')
+  expect(body['data']).to have_key('id')
+
+  # guarda o id para reutilizar no PUT
+  @user_id = body['data']['id']
 end
 
 
+
+
+# =========================
+# POST – Criar funcionário
+# =========================
+
 Dado('que o usuario deseja cadastrar um novo funcionario') do
-  @post_url = 'URL_DE_CADASTRO_AQUI'
+  @post_url = 'URL_CREATE'
+  @assert = Assertions.new
 end
 
 Quando('ele preenche os dados obrigatorios') do
-  @create_emplyee = HTTParty.post(@post_url, :headers => { 'Content-Type' => 'application/json' }, body: {
-    name: 'Teste API',
-    salary: '1234',
-    age: '30'
-  }), to_json
-
-   puts @create_emplyee
+  @create_employee = @create.create_employee(DATABASE[:name], DATABASE[:salary], DATABASE[:age])
+  puts @create_employee.body
 end
 
 Entao('o sistema salva o novo cadastro do funcionario') do
-expect(@create_emplyee.code).to eql (200)
-expect(@create_emplyee.msg).to eql 'OK'
-expect(@create_emplyee["status"]).to eql 'success'
-expect(@create_emplyee["message"]).to eql 'Successfully! Record has been added.'
-expect(@create_emplyee["data"]["name"]).to eql 'Teste API'
-expect(@create_emplyee["data"]["salary"]).to eql '1234'
-expect(@create_emplyee["data"]["age"]).to eql '30'
+  @assert.request_successful(@create_employee.code, @create_employee.message)
+  expect(@create_employee.code).to eq 200
+  expect(@create_employee.parsed_response['name']).to eq 'Teste API'
 end
+
+
+
+
+# =========================
+# PUT – Atualizar funcionário
+# =========================
+
+Dado('que o usuario deseja alterar os dados do cliente') do
+  @request = Employee_Requests.new
+end
+
+Quando('ele modifica as informacoes necessarias') do
+  @update_employee = @request.update_employee(@request.find_employee['data']['id'], 'Teste Alterado', '6000', '35')
+  puts @update_employee 
+
+Entao('o sistema atualiza o cadastro do cliente') do
+  expect(@update_employee.code).to eq 200
+  expect(@update_employee.parsed_response['name']).to eq 'Teste Alterado'
+end
+
+
+
+
+# =========================
+# DELETE – Deletar usuário
+# =========================
+
+Dado('que o usuario deseja deletar um usuario especifico') do
+ @request = Employee_Requests.new
+end
+
+Quando('ele faz a requisicao de exclusao') do
+  @delete_response = @request.delete_employee(@request.find_employee['data']['id'])
+end
+
+Entao('o sistema remove o cadastro do usuario') do
+  expect(@delete_response.code).to eq 200
+  expect(@delete_response.msg).to eq 'User deleted successfully'
+end
+
+
